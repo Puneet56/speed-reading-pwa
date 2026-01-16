@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA Icon Generator</h1>
+    <p>Click the buttons below to generate and download icons</p>
+    
+    <canvas id="icon192" width="192" height="192"></canvas>
+    <canvas id="icon512" width="512" height="512"></canvas>
+    
+    <div>
+        <button onclick="downloadIcon(192)">Download 192x192</button>
+        <button onclick="downloadIcon(512)">Download 512x512</button>
+    </div>
+
+    <script>
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#6b7280');
+            gradient.addColorStop(1, '#9ca3af');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Draw lightning bolt
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const boltWidth = size * 0.15;
+            const boltHeight = size * 0.4;
+            
+            // Lightning bolt shape
+            ctx.moveTo(centerX - boltWidth * 0.3, centerY - boltHeight * 0.5);
+            ctx.lineTo(centerX + boltWidth * 0.5, centerY - boltHeight * 0.2);
+            ctx.lineTo(centerX - boltWidth * 0.2, centerY);
+            ctx.lineTo(centerX + boltWidth * 0.3, centerY + boltHeight * 0.5);
+            ctx.lineTo(centerX - boltWidth * 0.5, centerY + boltHeight * 0.2);
+            ctx.lineTo(centerX + boltWidth * 0.2, centerY);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function downloadIcon(size) {
+            const canvas = document.getElementById(`icon${size}`);
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon-${size}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Draw icons on load
+        window.addEventListener('load', () => {
+            drawIcon(document.getElementById('icon192'), 192);
+            drawIcon(document.getElementById('icon512'), 512);
+        });
+    </script>
+</body>
+</html>
