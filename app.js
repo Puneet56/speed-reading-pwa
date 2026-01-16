@@ -17,6 +17,7 @@ class SpeedReader {
         this.startBtn = document.getElementById('startBtn');
         this.pauseBtn = document.getElementById('pauseBtn');
         this.resetBtn = document.getElementById('resetBtn');
+        this.saveBtn = document.getElementById('saveBtn');
         this.speedSlider = document.getElementById('speedSlider');
         this.speedValue = document.getElementById('speedValue');
         this.wordCountSlider = document.getElementById('wordCountSlider');
@@ -26,14 +27,20 @@ class SpeedReader {
         this.progressValue = document.getElementById('progressValue');
         this.wordsReadValue = document.getElementById('wordsReadValue');
         this.timeRemainingValue = document.getElementById('timeRemainingValue');
+        this.savedSessionsSection = document.getElementById('savedSessionsSection');
+        this.sessionsList = document.getElementById('sessionsList');
         // Anchor letter is always enabled
         this.anchorEnabled = true;
+        // Initialize database
+        this.db = new DatabaseManager();
+        this.currentSessionId = null;
     }
 
     attachEventListeners() {
         this.startBtn.addEventListener('click', () => this.start());
         this.pauseBtn.addEventListener('click', () => this.pause());
         this.resetBtn.addEventListener('click', () => this.reset());
+        this.saveBtn.addEventListener('click', () => this.saveProgress());
         this.speedSlider.addEventListener('input', (e) => {
             this.speedValue.textContent = e.target.value;
             if (this.isPlaying) {
@@ -55,6 +62,9 @@ class SpeedReader {
         this.textInput.addEventListener('input', () => {
             this.processText();
         });
+
+        // Load saved sessions on page load
+        this.loadSavedSessions();
     }
 
     processText() {
@@ -362,6 +372,155 @@ class SpeedReader {
         } else {
             this.timeRemainingValue.textContent = '--';
         }
+    }
+
+    async saveProgress() {
+        const text = this.textInput.value.trim();
+        if (!text) {
+            alert('No text to save!');
+            return;
+        }
+
+        const title = prompt('Enter a title for this session (or leave blank for auto-generated):');
+        if (title === null) return; // User cancelled
+
+        try {
+            const speed = parseInt(this.speedSlider.value);
+            const wordCount = parseInt(this.wordCountSlider.value);
+            
+            if (this.currentSessionId) {
+                // Update existing session
+                await this.db.updateSession(this.currentSessionId, {
+                    title: title || `Session ${new Date().toLocaleString()}`,
+                    text: text,
+                    currentIndex: this.currentIndex,
+                    speed: speed,
+                    wordCount: wordCount
+                });
+                alert('Progress updated!');
+            } else {
+                // Create new session
+                this.currentSessionId = await this.db.saveSession(
+                    title,
+                    text,
+                    this.currentIndex,
+                    speed,
+                    wordCount
+                );
+                alert('Progress saved!');
+            }
+            
+            await this.loadSavedSessions();
+        } catch (error) {
+            console.error('Error saving progress:', error);
+            alert('Error saving progress. Please try again.');
+        }
+    }
+
+    async loadSavedSessions() {
+        try {
+            const sessions = await this.db.getAllSessions();
+            
+            if (sessions.length === 0) {
+                this.savedSessionsSection.style.display = 'none';
+                return;
+            }
+
+            this.savedSessionsSection.style.display = 'block';
+            this.sessionsList.innerHTML = '';
+
+            sessions.forEach(session => {
+                const sessionItem = document.createElement('div');
+                sessionItem.className = 'session-item';
+                
+                const date = new Date(session.updatedAt).toLocaleString();
+                const progress = session.text ? Math.round((session.currentIndex / session.text.split(' ').length) * 100) : 0;
+                
+                sessionItem.innerHTML = `
+                    <div class="session-info">
+                        <div class="session-title">${this.escapeHtml(session.title)}</div>
+                        <div class="session-meta">
+                            <span>Progress: ${progress}%</span>
+                            <span>Speed: ${session.speed} WPM</span>
+                            <span>${date}</span>
+                        </div>
+                    </div>
+                    <div class="session-actions">
+                        <button class="btn btn-small btn-load" data-id="${session.id}">Load</button>
+                        <button class="btn btn-small btn-delete" data-id="${session.id}">Delete</button>
+                    </div>
+                `;
+
+                // Load button
+                sessionItem.querySelector('.btn-load').addEventListener('click', () => {
+                    this.loadSession(session.id);
+                });
+
+                // Delete button
+                sessionItem.querySelector('.btn-delete').addEventListener('click', async () => {
+                    if (confirm('Delete this session?')) {
+                        try {
+                            await this.db.deleteSession(session.id);
+                            if (this.currentSessionId === session.id) {
+                                this.currentSessionId = null;
+                            }
+                            await this.loadSavedSessions();
+                        } catch (error) {
+                            console.error('Error deleting session:', error);
+                            alert('Error deleting session.');
+                        }
+                    }
+                });
+
+                this.sessionsList.appendChild(sessionItem);
+            });
+        } catch (error) {
+            console.error('Error loading sessions:', error);
+        }
+    }
+
+    async loadSession(id) {
+        try {
+            const session = await this.db.getSession(id);
+            if (!session) {
+                alert('Session not found!');
+                return;
+            }
+
+            // Load the session data
+            this.textInput.value = session.text;
+            this.currentIndex = session.currentIndex || 0;
+            this.speedSlider.value = session.speed || 300;
+            this.speedValue.textContent = session.speed || 300;
+            this.wordCountSlider.value = session.wordCount || 1;
+            this.wordCountValue.textContent = session.wordCount || 1;
+            this.currentSessionId = session.id;
+
+            // Process the text
+            this.processText();
+
+            // Show reader section if there's text
+            if (session.text) {
+                this.readerSection.style.display = 'block';
+                this.updateStats();
+                
+                // Scroll to reader section
+                setTimeout(() => {
+                    this.readerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+
+            alert('Session loaded! Click "Speed Read" to continue from where you left off.');
+        } catch (error) {
+            console.error('Error loading session:', error);
+            alert('Error loading session.');
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 

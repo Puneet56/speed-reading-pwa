@@ -9,6 +9,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/png" href="icon-192.png">
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -48,6 +49,7 @@
             <div class="reader-controls">
                 <button id="pauseBtn" class="btn btn-secondary" disabled>Pause</button>
                 <button id="resetBtn" class="btn btn-secondary">Reset</button>
+                <button id="saveBtn" class="btn btn-secondary">Save Progress</button>
             </div>
         </div>
 
@@ -67,8 +69,16 @@
                 </div>
             </div>
         </div>
+
+        <div class="saved-sessions-section" id="savedSessionsSection" style="display: none;">
+            <div class="sessions-container">
+                <h3>Saved Sessions</h3>
+                <div id="sessionsList" class="sessions-list"></div>
+            </div>
+        </div>
     </div>
 
+    <script src="database.js"></script>
     <script src="app.js"></script>
     <script>
         // Register service worker for PWA

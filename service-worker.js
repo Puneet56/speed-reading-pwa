@@ -1,9 +1,10 @@
-const CACHE_NAME = 'speed-reader-v1';
+const CACHE_NAME = 'speed-reader-v2';
 const urlsToCache = [
   '/',
   '/index.html',
   '/styles.css',
   '/app.js',
+  '/database.js',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
